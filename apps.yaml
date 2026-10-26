@@ -1,0 +1,29 @@
+# The apps the launcher knows about. Add a new block to add a card.
+#   name         shown as the card title
+#   description  one line under the title
+#   icon         an emoji
+#   path         the app's project folder (~ is allowed)
+#   command      how to start it, run from inside `path`
+#   port         the localhost port it listens on
+
+apps:
+  - name: run-planner
+    description: Training plan, calendar, and gap filler
+    icon: "🏃"
+    path: ~/Projects/run-planner
+    command: .venv/bin/streamlit run app.py --server.port 8501 --server.headless true
+    port: 8501
+
+  - name: Rental Investor
+    description: Rental property analysis
+    icon: "🏠"
+    path: ~/Projects/homeledger
+    command: .venv/bin/streamlit run apps/rentals/Home.py --server.port 8502 --server.headless true
+    port: 8502
+
+  - name: Tax Helper
+    description: Tax prep helper
+    icon: "🧾"
+    path: ~/Projects/homeledger
+    command: .venv/bin/streamlit run apps/taxes/Home.py --server.port 8503 --server.headless true
+    port: 8503

@@ -1,0 +1,28 @@
+[project]
+name = "launcher"
+version = "0.1.0"
+description = "Home page for Josh's locally hosted apps"
+requires-python = ">=3.12"
+dependencies = [
+    "streamlit>=1.40",
+    "pyyaml>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
