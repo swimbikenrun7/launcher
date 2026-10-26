@@ -1,9 +1,22 @@
+import os
 import socket
+import sys
 from pathlib import Path
 
 import pytest
 
-from launcher.apps import AppsFileError, is_running, load_apps
+from launcher.apps import (
+    App,
+    AppsFileError,
+    AppStartError,
+    child_env,
+    is_running,
+    load_apps,
+    log_path,
+    start_app,
+    tail,
+    wait_until_running,
+)
 
 REPO_APPS_FILE = Path(__file__).parent.parent / "apps.yaml"
 
@@ -82,3 +95,51 @@ def test_is_running_false_when_nothing_listens():
         s.bind(("127.0.0.1", 0))
         free_port = s.getsockname()[1]
     assert not is_running(free_port)
+
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def make_app(path, command, port=9001):
+    return App("My App", "d", "x", Path(path), command, port)
+
+
+def test_start_app_runs_command_and_waits_for_port(tmp_path):
+    port = free_port()
+    command = f"{sys.executable} -m http.server {port} --bind 127.0.0.1"
+    app = make_app(tmp_path, command, port)
+    proc = start_app(app, tmp_path / "logs")
+    try:
+        assert wait_until_running(app, proc, timeout=10)
+        assert is_running(port)
+    finally:
+        proc.terminate()
+        proc.wait()
+
+
+def test_start_app_reports_early_exit_and_logs_output(tmp_path):
+    app = make_app(tmp_path, f"{sys.executable} -c \"print('boom'); raise SystemExit(1)\"")
+    proc = start_app(app, tmp_path / "logs")
+    assert not wait_until_running(app, proc, timeout=10)
+    assert "boom" in tail(log_path(app, tmp_path / "logs"))
+
+
+def test_start_app_missing_folder(tmp_path):
+    with pytest.raises(AppStartError, match="doesn't exist"):
+        start_app(make_app(tmp_path / "nope", "true"), tmp_path / "logs")
+
+
+def test_start_app_missing_program(tmp_path):
+    with pytest.raises(AppStartError, match="couldn't run"):
+        start_app(make_app(tmp_path, ".venv/bin/streamlit run x.py"), tmp_path / "logs")
+
+
+def test_child_env_drops_launcher_venv(monkeypatch):
+    monkeypatch.setenv("VIRTUAL_ENV", "/x/launcher/.venv")
+    monkeypatch.setenv("PATH", f"/x/launcher/.venv/bin{os.pathsep}/usr/bin")
+    env = child_env()
+    assert "VIRTUAL_ENV" not in env
+    assert env["PATH"] == "/usr/bin"
